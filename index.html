@@ -78,13 +78,21 @@
     .time-slot { height: 45px; border-bottom: 1px dashed #fce8ec; display: flex; align-items: flex-start; font-size: 10px; color: #a4717a; position: relative; }
     .task-block { position: absolute; left: 45px; right: 5px; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* Task Card & Note Display */
-    .task-card { background: var(--bg); border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); }
+    /* Task Card & Drag Handle */
+    .task-card { background: var(--bg); border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: grab; }
+    .task-card:active { cursor: grabbing; }
+    .task-card.dragging { opacity: 0.4; border: 2px dashed var(--pink-main); }
+    .task-card.pinned { background: #fff0f3; border: 1.5px solid var(--pink-main); box-shadow: 0 2px 6px rgba(255, 117, 143, 0.15); }
+    
+    .drag-handle { color: #a4717a; font-weight: bold; margin-right: 6px; cursor: grab; font-size: 14px; user-select: none; }
     .task-card-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; align-items: center; }
+    .task-title-group { display: flex; align-items: center; }
     .task-note-text { font-size: 11px; color: #7a5c63; margin-top: 6px; white-space: pre-line; background: #fff; padding: 6px 8px; border-radius: 8px; border: 1px dashed var(--border); }
     .task-card-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
     
     /* Action Buttons */
+    .pin-btn { background: #fff; color: var(--pink-main); border: 1px solid var(--pink-main); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .pin-btn.active { background: var(--pink-main); color: #fff; }
     .timer-btn { background: var(--pink-main); color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; font-family: monospace; }
     .timer-btn.running { background: #d90429; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
@@ -292,7 +300,7 @@
 
         <div class="panel">
           <div class="panel-title">
-            <span><i data-lucide="list" style="color:var(--pink-main); width:18px;"></i> Danh sách việc</span>
+            <span><i data-lucide="list" style="color:var(--pink-main); width:18px;"></i> Danh sách việc (Kéo để xếp lại)</span>
             <span style="font-size:11px; color:#a4717a;" id="displaySelectedDate"></span>
           </div>
           <div id="todayTaskList"></div>
@@ -360,6 +368,7 @@
     let currentPeriod = 'week';
     let barChartInstance = null;
     let doughnutChartInstance = null;
+    let draggedTaskId = null;
 
     function formatHMS(seconds) {
       const h = Math.floor(seconds / 3600);
@@ -670,7 +679,7 @@
           date: selectedDate,
           category: selectedCategory,
           targetSec: totalSec, spentSec: 0,
-          isDone: false
+          isDone: false, isPinned: false
         });
       } else {
         const start = document.getElementById('startTime').value;
@@ -681,7 +690,7 @@
           id: Date.now(), name, note, mode,
           date: selectedDate,
           category: selectedCategory,
-          start, end, isDone: false
+          start, end, isDone: false, isPinned: false
         });
 
         timelineBlocks.push({
@@ -720,6 +729,13 @@
     function toggleTaskDone(id) {
       const t = tasks.find(item => item.id === id);
       if (t) t.isDone = !t.isDone;
+      renderTaskList();
+      saveDataToPrivateRepo();
+    }
+
+    function togglePinTask(id) {
+      const t = tasks.find(item => item.id === id);
+      if (t) t.isPinned = !t.isPinned;
       renderTaskList();
       saveDataToPrivateRepo();
     }
@@ -816,11 +832,50 @@
       }
     }
 
+    /* KÉO VÀ THẢ DI CHUYỂN TASK */
+    function handleDragStart(e) {
+      draggedTaskId = parseInt(this.getAttribute('data-id'));
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+      draggedTaskId = null;
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const targetTaskId = parseInt(this.getAttribute('data-id'));
+      if (draggedTaskId === null || draggedTaskId === targetTaskId) return;
+
+      const dayTasks = tasks.filter(t => t.date === selectedDate);
+      const fromIndex = dayTasks.findIndex(t => t.id === draggedTaskId);
+      const toIndex = dayTasks.findIndex(t => t.id === targetTaskId);
+
+      if (fromIndex < 0 || toIndex < 0) return;
+
+      const [movedTask] = dayTasks.splice(fromIndex, 1);
+      dayTasks.splice(toIndex, 0, movedTask);
+
+      // Cập nhật lại mảng tasks tổng
+      const otherTasks = tasks.filter(t => t.date !== selectedDate);
+      tasks = [...otherTasks, ...dayTasks];
+
+      renderTaskList();
+      saveDataToPrivateRepo();
+    }
+
     function renderTaskList() {
       const container = document.getElementById('todayTaskList');
       container.innerHTML = '';
 
-      const dayTasks = tasks.filter(t => t.date === selectedDate);
+      let dayTasks = tasks.filter(t => t.date === selectedDate);
 
       let totalTasks = dayTasks.length;
       let fixedTasks = dayTasks.filter(t => t.mode === 'fixed').length;
@@ -845,21 +900,37 @@
 
       dayTasks.forEach(t => {
         const doneClass = t.isDone ? 'task-done' : '';
+        const pinnedClass = t.isPinned ? 'pinned' : '';
+        const pinBtnClass = t.isPinned ? 'pin-btn active' : 'pin-btn';
+        const pinBtnText = t.isPinned ? '📌 Bỏ ghim' : '📌 Ghim';
+        const pinnedBadge = t.isPinned ? `<span style="font-size:10px; color:var(--pink-main); margin-right:4px;">⭐ ĐÃ GHIM</span>` : '';
         const noteHtml = t.note ? `<div class="task-note-text">📝 ${t.note}</div>` : '';
 
+        const card = document.createElement('div');
+        card.className = `task-card ${pinnedClass} ${doneClass}`;
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-id', t.id);
+
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('dragend', handleDragEnd);
+
         if (t.mode === 'fixed') {
-          container.innerHTML += `
-            <div class="task-card ${doneClass}">
-              <div class="task-card-header">
-                <span>${t.name}</span>
-                <span style="font-size:10px; background:${t.category.color}; color:#fff; padding:2px 6px; border-radius:8px;">${t.start} - ${t.end}</span>
-              </div>
-              ${noteHtml}
-              <div class="task-card-actions">
-                <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
-                <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
-                <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
-              </div>
+          card.innerHTML = `
+            <div class="task-card-header">
+              <span class="task-title-group">
+                <span class="drag-handle">⋮⋮</span>
+                ${pinnedBadge}${t.name}
+              </span>
+              <span style="font-size:10px; background:${t.category.color}; color:#fff; padding:2px 6px; border-radius:8px;">${t.start} - ${t.end}</span>
+            </div>
+            ${noteHtml}
+            <div class="task-card-actions">
+              <button class="${pinBtnClass}" onclick="togglePinTask(${t.id})">${pinBtnText}</button>
+              <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+              <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
+              <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
             </div>`;
         } else {
           const remainSec = Math.max(0, t.targetSec - t.spentSec);
@@ -867,23 +938,27 @@
           const timerBtnClass = isRunning ? "timer-btn running" : "timer-btn";
           const timerBtnText = isRunning ? `⏹️ ${formatHMS(t.spentSec)}` : `▶️ Bắt đầu`;
 
-          container.innerHTML += `
-            <div class="task-card ${doneClass}">
-              <div class="task-card-header">
-                <span>${t.name}</span>
-                <span style="font-size:11px; color:var(--pink-main)">Còn: ${formatHMS(remainSec)}</span>
-              </div>
-              ${noteHtml}
-              <div class="task-card-actions">
-                <button class="${timerBtnClass}" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
-                  ${timerBtnText}
-                </button>
-                <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
-                <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
-                <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
-              </div>
+          card.innerHTML = `
+            <div class="task-card-header">
+              <span class="task-title-group">
+                <span class="drag-handle">⋮⋮</span>
+                ${pinnedBadge}${t.name}
+              </span>
+              <span style="font-size:11px; color:var(--pink-main)">Còn: ${formatHMS(remainSec)}</span>
+            </div>
+            ${noteHtml}
+            <div class="task-card-actions">
+              <button class="${pinBtnClass}" onclick="togglePinTask(${t.id})">${pinBtnText}</button>
+              <button class="${timerBtnClass}" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
+                ${timerBtnText}
+              </button>
+              <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+              <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
+              <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
             </div>`;
         }
+
+        container.appendChild(card);
       });
     }
 
