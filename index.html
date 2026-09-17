@@ -85,7 +85,10 @@
     .task-card-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
     
     /* Action Buttons */
-    .timer-btn { background: var(--pink-main); color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .timer-btn { background: var(--pink-main); color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; font-family: monospace; }
+    .timer-btn.running { background: #d90429; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
     .finish-btn { background: #70e000; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
     .edit-btn { background: #ffb703; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
     .delete-btn { background: #ff4d6d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; margin-left: auto; font-weight: bold; }
@@ -140,7 +143,6 @@
       </div>
     </div>
 
-    <!-- DÀN NGANG CẢ 4 NÚT -->
     <div class="nav-tools-container">
       <button class="tab-btn active" id="btnTabTask" onclick="switchTab('tasks')"><i data-lucide="check-square" style="width:16px;"></i> Lịch & Task</button>
       <button class="tab-btn" id="btnTabStats" onclick="switchTab('stats')"><i data-lucide="bar-chart-2" style="width:16px;"></i> Thống Kê</button>
@@ -222,7 +224,7 @@
       </div>
       <div class="summary-card">
         <div class="summary-lbl">Việc chưa xong</div>
-        <div class="summary-val" id="statFlexRemain">0h 0m</div>
+        <div class="summary-val" id="statFlexRemain">0h 0m 0s</div>
       </div>
       <div class="summary-card">
         <div class="summary-lbl">Cố định</div>
@@ -254,7 +256,6 @@
           <label>Tên công việc / Môn học</label>
           <input type="text" id="taskName" placeholder="Ví dụ: Học IELTS, NLP..." />
 
-          <!-- Ô NOTE ĐA DÒNG -->
           <label>Ghi chú (Note)</label>
           <textarea id="taskNote" placeholder="Ví dụ: &#10;- Học từ vựng Unit 1&#10;- Luyện nói 15 phút..."></textarea>
 
@@ -359,6 +360,13 @@
     let currentPeriod = 'week';
     let barChartInstance = null;
     let doughnutChartInstance = null;
+
+    function formatHMS(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
 
     function toggleTokenModal() {
       const modal = document.getElementById('tokenModal');
@@ -716,7 +724,6 @@
       saveDataToPrivateRepo();
     }
 
-    /* EDIT TASK FUNCTIONALITY */
     function toggleEditModal() {
       const modal = document.getElementById('editTaskModal');
       modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
@@ -772,7 +779,6 @@
         const end = document.getElementById('editEndTime').value;
         if (!start || !end) return alert("Vui lòng nhập đủ thời gian!");
 
-        // Cập nhật lại timeline block tương ứng
         const oldName = t.name;
         t.start = start;
         t.end = end;
@@ -827,13 +833,10 @@
         }
       });
 
-      const remainH = Math.floor(remainSecTotal / 3600);
-      const remainM = Math.floor((remainSecTotal % 3600) / 60);
-
       document.getElementById('statTotal').innerText = totalTasks;
       document.getElementById('statFixedCount').innerText = fixedTasks;
       document.getElementById('statDoneCount').innerText = doneTasks;
-      document.getElementById('statFlexRemain').innerText = `${remainH}h ${remainM}m`;
+      document.getElementById('statFlexRemain').innerText = formatHMS(remainSecTotal);
 
       if (dayTasks.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:#a4717a; padding:16px; font-size:12px;">Chưa có nhiệm vụ nào! ✨</div>`;
@@ -860,19 +863,20 @@
             </div>`;
         } else {
           const remainSec = Math.max(0, t.targetSec - t.spentSec);
-          const rH = Math.floor(remainSec / 3600);
-          const rM = Math.floor((remainSec % 3600) / 60);
+          const isRunning = activeTimer && activeTimer.id === t.id;
+          const timerBtnClass = isRunning ? "timer-btn running" : "timer-btn";
+          const timerBtnText = isRunning ? `⏹️ ${formatHMS(t.spentSec)}` : `▶️ Bắt đầu`;
 
           container.innerHTML += `
             <div class="task-card ${doneClass}">
               <div class="task-card-header">
                 <span>${t.name}</span>
-                <span style="font-size:11px; color:var(--pink-main)">Còn: ${rH}h ${rM}m</span>
+                <span style="font-size:11px; color:var(--pink-main)">Còn: ${formatHMS(remainSec)}</span>
               </div>
               ${noteHtml}
               <div class="task-card-actions">
-                <button class="timer-btn" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
-                  ${activeTimer && activeTimer.id === t.id ? '⏹️ Dừng' : '▶️ Bắt đầu'}
+                <button class="${timerBtnClass}" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
+                  ${timerBtnText}
                 </button>
                 <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
                 <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
