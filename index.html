@@ -22,8 +22,8 @@
     
     /* Top Header */
     .top-bar { display: flex; flex-direction: column; gap: 12px; max-width: 1200px; margin: 0 auto 12px; }
-    .brand-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-row { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .brand-icon { background: var(--pink-light); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .brand-title { font-weight: bold; font-size: 16px; color: #b7094c; }
     .brand-sub { font-size: 11px; color: #a4717a; }
@@ -60,8 +60,9 @@
     .panel-title { font-weight: bold; font-size: 15px; color: #800f2f; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
     
     label { font-size: 11px; color: #8d5b65; margin-bottom: 4px; display: block; font-weight: 600; }
-    input, select { width: 100%; padding: 10px; border: 1px solid var(--border); background: #fffafb; border-radius: 10px; outline: none; margin-bottom: 10px; color: var(--text); font-size: 13px; }
-    
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); background: #fffafb; border-radius: 10px; outline: none; margin-bottom: 10px; color: var(--text); font-size: 13px; }
+    textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+
     .color-tags-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .btn-add-tag { background: none; border: none; color: var(--pink-main); font-size: 11px; font-weight: bold; cursor: pointer; padding: 0; }
     
@@ -77,18 +78,22 @@
     .time-slot { height: 45px; border-bottom: 1px dashed #fce8ec; display: flex; align-items: flex-start; font-size: 10px; color: #a4717a; position: relative; }
     .task-block { position: absolute; left: 45px; right: 5px; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* Task Card */
+    /* Task Card & Note Display */
     .task-card { background: var(--bg); border-radius: 12px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); }
     .task-card-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; align-items: center; }
-    .task-card-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+    .task-note-text { font-size: 11px; color: #7a5c63; margin-top: 6px; white-space: pre-line; background: #fff; padding: 6px 8px; border-radius: 8px; border: 1px dashed var(--border); }
+    .task-card-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+    
+    /* Action Buttons */
     .timer-btn { background: var(--pink-main); color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
-    .finish-btn { background: #70e000; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; }
-    .delete-btn { background: #ff4d6d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; margin-left: auto; }
+    .finish-btn { background: #70e000; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .edit-btn { background: #ffb703; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+    .delete-btn { background: #ff4d6d; color: white; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; margin-left: auto; font-weight: bold; }
     .task-done { opacity: 0.6; text-decoration: line-through; }
 
     /* Modal Popup */
-    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; padding: 16px; }
-    .modal-card { background: #fff; width: 100%; max-width: 400px; margin: 15% auto; padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; padding: 16px; overflow-y: auto; }
+    .modal-card { background: #fff; width: 100%; max-width: 420px; margin: 10% auto; padding: 16px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 
     /* Analytics */
     .analytics-filter { display: flex; gap: 6px; margin-bottom: 16px; background: #fff; padding: 6px; border-radius: 12px; border: 1px solid var(--border); width: 100%; }
@@ -99,8 +104,8 @@
 
     @media (min-width: 768px) {
       body { padding: 20px; }
-      .top-bar { flex-direction: row; justify-content: space-between; align-items: center; }
-      .brand-row { width: auto; }
+      .top-bar { flex-direction: row; justify-content: space-between; align-items: center; gap: 20px; }
+      .brand-row { width: auto; gap: 24px; flex-shrink: 0; }
       .date-picker-bar { width: auto; }
       .nav-tools-container { width: auto; }
       
@@ -172,6 +177,41 @@
     </div>
   </div>
 
+  <!-- MODAL EDIT TASK -->
+  <div class="modal-overlay" id="editTaskModal">
+    <div class="modal-card">
+      <h3 style="margin-top:0; color:#800f2f; font-size:16px;">✏️ Chỉnh sửa công việc</h3>
+      <input type="hidden" id="editTaskId">
+
+      <label>Tên công việc</label>
+      <input type="text" id="editTaskName">
+
+      <label>Ghi chú (Note)</label>
+      <textarea id="editTaskNote"></textarea>
+
+      <div id="editFlexibleArea">
+        <label>Mục tiêu thời gian mới</label>
+        <div class="flex-inputs">
+          <input type="number" id="editHours" placeholder="Giờ" min="0">
+          <input type="number" id="editMins" placeholder="Phút" min="0" max="59">
+        </div>
+      </div>
+
+      <div id="editFixedArea" style="display:none;">
+        <label>Khung giờ mới</label>
+        <div class="flex-inputs">
+          <input type="time" id="editStartTime">
+          <input type="time" id="editEndTime">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+        <button class="btn-tool" onclick="toggleEditModal()">Hủy</button>
+        <button class="btn-submit" style="width:auto; padding:6px 16px; font-size:12px;" onclick="saveTaskEdit()">Lưu thay đổi</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TAB 1: TASK & TIMELINE -->
   <div id="viewTasks" class="view-section">
     <!-- SUMMARY BAR -->
@@ -213,6 +253,10 @@
           
           <label>Tên công việc / Môn học</label>
           <input type="text" id="taskName" placeholder="Ví dụ: Học IELTS, NLP..." />
+
+          <!-- Ô NOTE ĐA DÒNG -->
+          <label>Ghi chú (Note)</label>
+          <textarea id="taskNote" placeholder="Ví dụ: &#10;- Học từ vựng Unit 1&#10;- Luyện nói 15 phút..."></textarea>
 
           <div class="color-tags-header">
             <label style="margin:0;">Loại công việc</label>
@@ -603,6 +647,7 @@
 
     function addTask() {
       const name = document.getElementById('taskName').value.trim();
+      const note = document.getElementById('taskNote').value.trim();
       const mode = document.getElementById('taskMode').value;
       if (!name) return alert("Vui lòng nhập tên công việc!");
 
@@ -613,7 +658,7 @@
         if (totalSec <= 0) return alert("Vui lòng nhập thời gian mục tiêu!");
 
         tasks.push({
-          id: Date.now(), name, mode,
+          id: Date.now(), name, note, mode,
           date: selectedDate,
           category: selectedCategory,
           targetSec: totalSec, spentSec: 0,
@@ -625,7 +670,7 @@
         if (!start || !end) return alert("Vui lòng nhập đủ thời gian!");
 
         tasks.push({
-          id: Date.now(), name, mode,
+          id: Date.now(), name, note, mode,
           date: selectedDate,
           category: selectedCategory,
           start, end, isDone: false
@@ -642,6 +687,7 @@
       }
 
       document.getElementById('taskName').value = '';
+      document.getElementById('taskNote').value = '';
       renderTaskList();
       saveDataToPrivateRepo();
     }
@@ -666,6 +712,81 @@
     function toggleTaskDone(id) {
       const t = tasks.find(item => item.id === id);
       if (t) t.isDone = !t.isDone;
+      renderTaskList();
+      saveDataToPrivateRepo();
+    }
+
+    /* EDIT TASK FUNCTIONALITY */
+    function toggleEditModal() {
+      const modal = document.getElementById('editTaskModal');
+      modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function openEditTask(id) {
+      const t = tasks.find(item => item.id === id);
+      if (!t) return;
+
+      document.getElementById('editTaskId').value = t.id;
+      document.getElementById('editTaskName').value = t.name;
+      document.getElementById('editTaskNote').value = t.note || '';
+
+      if (t.mode === 'flexible') {
+        document.getElementById('editFlexibleArea').style.display = 'block';
+        document.getElementById('editFixedArea').style.display = 'none';
+
+        const h = Math.floor(t.targetSec / 3600);
+        const m = Math.floor((t.targetSec % 3600) / 60);
+        document.getElementById('editHours').value = h;
+        document.getElementById('editMins').value = m;
+      } else {
+        document.getElementById('editFlexibleArea').style.display = 'none';
+        document.getElementById('editFixedArea').style.display = 'grid';
+
+        document.getElementById('editStartTime').value = t.start || '';
+        document.getElementById('editEndTime').value = t.end || '';
+      }
+
+      toggleEditModal();
+    }
+
+    function saveTaskEdit() {
+      const id = parseInt(document.getElementById('editTaskId').value);
+      const t = tasks.find(item => item.id === id);
+      if (!t) return;
+
+      const name = document.getElementById('editTaskName').value.trim();
+      const note = document.getElementById('editTaskNote').value.trim();
+      if (!name) return alert("Vui lòng nhập tên công việc!");
+
+      t.name = name;
+      t.note = note;
+
+      if (t.mode === 'flexible') {
+        const h = parseInt(document.getElementById('editHours').value) || 0;
+        const m = parseInt(document.getElementById('editMins').value) || 0;
+        const totalSec = (h * 3600) + (m * 60);
+        if (totalSec <= 0) return alert("Thời gian mục tiêu phải lớn hơn 0!");
+        t.targetSec = totalSec;
+      } else {
+        const start = document.getElementById('editStartTime').value;
+        const end = document.getElementById('editEndTime').value;
+        if (!start || !end) return alert("Vui lòng nhập đủ thời gian!");
+
+        // Cập nhật lại timeline block tương ứng
+        const oldName = t.name;
+        t.start = start;
+        t.end = end;
+
+        const bIdx = timelineBlocks.findIndex(b => b.date === t.date && b.title === oldName);
+        if (bIdx >= 0) {
+          timelineBlocks[bIdx].title = name;
+          timelineBlocks[bIdx].start = start;
+          timelineBlocks[bIdx].end = end;
+        }
+        renderTimelineBase();
+      }
+
+      toggleEditModal();
       renderTaskList();
       saveDataToPrivateRepo();
     }
@@ -721,6 +842,8 @@
 
       dayTasks.forEach(t => {
         const doneClass = t.isDone ? 'task-done' : '';
+        const noteHtml = t.note ? `<div class="task-note-text">📝 ${t.note}</div>` : '';
+
         if (t.mode === 'fixed') {
           container.innerHTML += `
             <div class="task-card ${doneClass}">
@@ -728,8 +851,10 @@
                 <span>${t.name}</span>
                 <span style="font-size:10px; background:${t.category.color}; color:#fff; padding:2px 6px; border-radius:8px;">${t.start} - ${t.end}</span>
               </div>
+              ${noteHtml}
               <div class="task-card-actions">
                 <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+                <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
                 <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
               </div>
             </div>`;
@@ -744,11 +869,13 @@
                 <span>${t.name}</span>
                 <span style="font-size:11px; color:var(--pink-main)">Còn: ${rH}h ${rM}m</span>
               </div>
+              ${noteHtml}
               <div class="task-card-actions">
                 <button class="timer-btn" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
                   ${activeTimer && activeTimer.id === t.id ? '⏹️ Dừng' : '▶️ Bắt đầu'}
                 </button>
                 <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+                <button class="edit-btn" onclick="openEditTask(${t.id})">✏️ Sửa</button>
                 <button class="delete-btn" onclick="deleteTask(${t.id})">🗑️ Xóa</button>
               </div>
             </div>`;
