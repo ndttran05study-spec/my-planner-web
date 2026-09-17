@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study & Work Planner</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js để vẽ biểu đồ thống kê -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #fff8f6;
+      --card-bg: #ffffff;
+      --pink-main: #ff758f;
+      --pink-light: #ffb3c1;
+      --pink-soft: #fff0f3;
+      --text: #594146;
+      --border: #ffe3e8;
+    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    
+    .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 10px; flex-wrap: wrap; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon { background: var(--pink-light); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .brand-title { font-weight: bold; font-size: 18px; color: #b7094c; }
+    .brand-sub { font-size: 12px; color: #a4717a; }
+
+    .nav-tools { display: flex; gap: 10px; align-items: center; }
+    .tab-btn { padding: 8px 16px; border-radius: 20px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; background: #fff; color: var(--text); border: 1px solid var(--border); transition: 0.2s; }
+    .tab-btn.active { background: var(--pink-main); color: white; border-color: var(--pink-main); }
+    .btn-tool { padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: #fff; font-size: 13px; font-weight: bold; cursor: pointer; color: var(--text); }
+
+    /* Thanh Cloud Sync Status */
+    .sync-bar-container { max-width: 1200px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px 16px; border-radius: 16px; border: 1px solid var(--border); }
+    .sync-status { font-size: 13px; font-weight: bold; }
+
+    /* Thanh chọn ngày */
+    .date-picker-bar { display: flex; align-items: center; gap: 10px; background: #fff; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); }
+    .date-picker-bar input[type="date"] { border: none; background: transparent; margin: 0; font-weight: bold; color: var(--pink-main); cursor: pointer; padding: 0; width: auto; }
+
+    /* Container chung */
+    .view-section { max-width: 1200px; margin: 0 auto; }
+    .hidden { display: none !important; }
+
+    /* Dashboard & Summary Grid */
+    .dashboard { display: grid; grid-template-columns: 420px 1fr; gap: 20px; }
+    
+    .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .summary-card { background: #fff; border: 1px solid var(--border); padding: 16px; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+    .summary-val { font-size: 20px; font-weight: bold; color: var(--pink-main); margin-top: 6px; }
+    .summary-lbl { font-size: 12px; color: #a4717a; }
+
+    .panel { background: var(--card-bg); border-radius: 20px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(255, 117, 143, 0.05); }
+    .panel-title { font-weight: bold; font-size: 16px; color: #800f2f; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+    
+    label { font-size: 12px; color: #8d5b65; margin-bottom: 5px; display: block; font-weight: 500; }
+    input, select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); background: #fffafb; border-radius: 12px; outline: none; margin-bottom: 12px; color: var(--text); }
+    
+    .color-tags-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .btn-add-tag { background: none; border: none; color: var(--pink-main); font-size: 12px; font-weight: bold; cursor: pointer; }
+    
+    .color-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .tag-btn { padding: 6px 12px; border-radius: 15px; font-size: 12px; border: 1px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+    .tag-btn.selected { border-color: var(--pink-main); box-shadow: 0 0 0 2px var(--pink-light); }
+
+    .flex-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-submit { width: 100%; background: var(--pink-main); color: white; border: none; padding: 12px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 14px; }
+
+    /* Timeline 24h */
+    .timeline-container { height: 580px; overflow-y: auto; border-left: 2px solid var(--pink-soft); padding-left: 15px; position: relative; }
+    .time-slot { height: 50px; border-bottom: 1px dashed #fce8ec; display: flex; align-items: flex-start; font-size: 11px; color: #a4717a; position: relative; }
+    .task-block { position: absolute; left: 50px; right: 10px; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: bold; color: white; }
+
+    /* Task Card */
+    .task-card { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); }
+    .task-card-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; }
+    .task-card-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+    .timer-btn { background: var(--pink-main); color: white; border: none; padding: 5px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold; }
+    .finish-btn { background: #70e000; color: white; border: none; padding: 5px 10px; border-radius: 10px; cursor: pointer; font-size: 12px; }
+    .task-done { opacity: 0.6; text-decoration: line-through; }
+
+    /* Modal Popup */
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 1000; }
+    .modal-card { background: #fff; width: 90%; max-width: 420px; margin: 10% auto; padding: 20px; border-radius: 20px; border: 1px solid var(--border); }
+
+    /* GIAO DIỆN THỐNG KÊ */
+    .analytics-filter { display: flex; gap: 10px; margin-bottom: 20px; background: #fff; padding: 8px; border-radius: 16px; border: 1px solid var(--border); width: fit-content; }
+    .filter-btn { padding: 8px 18px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; background: transparent; color: var(--text); }
+    .filter-btn.active { background: var(--pink-soft); color: var(--pink-main); }
+
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .chart-card { background: #fff; padding: 20px; border-radius: 20px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <div class="top-bar">
+    <div class="brand">
+      <div class="brand-icon">🌸</div>
+      <div>
+        <div class="brand-title">Study & Work Planner</div>
+        <div class="brand-sub">Quản lý thời gian & Học tập thông minh</div>
+      </div>
+    </div>
+
+    <!-- Nút Lựa Chọn Ngày -->
+    <div class="date-picker-bar">
+      <i data-lucide="calendar" style="width:16px; height:16px; color:var(--pink-main);"></i>
+      <input type="date" id="selectedDateInput" onchange="onDateChange()" />
+      <button class="btn-tool" style="padding:4px 10px; font-size:11px;" onclick="goToToday()">Hôm nay</button>
+    </div>
+
+    <div class="nav-tools">
+      <button class="tab-btn active" id="btnTabTask" onclick="switchTab('tasks')"><i data-lucide="check-square"></i> Lịch & Task</button>
+      <button class="tab-btn" id="btnTabStats" onclick="switchTab('stats')"><i data-lucide="bar-chart-2"></i> Thống Kê</button>
+      <button class="btn-tool" onclick="exportData()"><i data-lucide="download"></i> Sao lưu (Lưu Cloud)</button>
+      <button class="btn-tool" onclick="importData()"><i data-lucide="upload"></i> Nạp lại</button>
+    </div>
+  </div>
+
+  <!-- BAR TRẠNG THÁI CLOUD SYNC -->
+  <div class="sync-bar-container">
+    <div class="sync-status" id="syncStatusText">🔴 Chưa cấu hình Cloud Sync (Chế độ Local)</div>
+    <button class="btn-tool" style="font-size:12px;" onclick="toggleTokenModal()">⚙️ Cấu hình GitHub Token</button>
+  </div>
+
+  <!-- MODAL CAU HINH GITHUB TOKEN -->
+  <div class="modal-overlay" id="tokenModal">
+    <div class="modal-card">
+      <h3 style="margin-top:0; color:#800f2f;">⚙️ GitHub Cloud Sync</h3>
+      <p style="font-size:12px; color:#a4717a;">Nhập Token và Repo Private để đồng bộ tự động giữa các thiết bị.</p>
+      
+      <label>GitHub Username:</label>
+      <input type="text" id="ghUsernameInput" placeholder="Ví dụ: myusername">
+
+      <label>Tên Repo Private:</label>
+      <input type="text" id="ghRepoInput" placeholder="Ví dụ: my-planner-db">
+
+      <label>Personal Access Token (PAT):</label>
+      <input type="password" id="ghTokenInput" placeholder="github_pat_...">
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
+        <button class="btn-tool" onclick="toggleTokenModal()">Hủy</button>
+        <button class="btn-submit" style="width:auto; padding:8px 16px;" onclick="saveSyncSettings()">Lưu & Kết nối</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1: GIAO DIỆN TASK & TIMELINE HÀNG NGÀY -->
+  <div id="viewTasks" class="view-section">
+    <!-- BẢNG THỐNG KÊ TỔNG QUAN TRONG NGÀY -->
+    <div class="summary-bar">
+      <div class="summary-card">
+        <div class="summary-lbl">Tổng việc ngày này</div>
+        <div class="summary-val" id="statTotal">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Việc linh hoạt chưa xong</div>
+        <div class="summary-val" id="statFlexRemain">0h 0m</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Sự kiện cố định</div>
+        <div class="summary-val" id="statFixedCount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Đã hoàn thành</div>
+        <div class="summary-val" id="statDoneCount" style="color: #70e000;">0</div>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <!-- CỘT TRÁI -->
+      <div>
+        <div class="panel" style="margin-bottom: 20px;">
+          <div class="panel-title"><i data-lucide="plus-circle" style="color:var(--pink-main)"></i> Thêm việc cần làm</div>
+          
+          <label>Tên công việc / Môn học</label>
+          <input type="text" id="taskName" placeholder="Ví dụ: Học IELTS, Đi học trường..." />
+
+          <div class="color-tags-header">
+            <label style="margin:0;">Màu sắc / Loại công việc</label>
+            <button class="btn-add-tag" onclick="addNewCategory()">+ Thêm màu mới</button>
+          </div>
+          <div class="color-tags" id="tagList"></div>
+
+          <label>Hình thức thực hiện</label>
+          <select id="taskMode" onchange="toggleMode()">
+            <option value="flexible">⏳ Linh hoạt (Tính giờ / Đếm ngược)</option>
+            <option value="fixed">📌 Cố định (Theo khung giờ trong ngày)</option>
+          </select>
+
+          <div id="flexibleArea">
+            <label>Mục tiêu thời gian (Giờ / Phút)</label>
+            <div class="flex-inputs">
+              <input type="number" id="inputHours" placeholder="Số giờ" min="0" />
+              <input type="number" id="inputMins" placeholder="Số phút" min="0" max="59" />
+            </div>
+          </div>
+
+          <div id="fixedArea" style="display:none;">
+            <label>Khung giờ diễn ra</label>
+            <div class="flex-inputs">
+              <input type="time" id="startTime" />
+              <input type="time" id="endTime" />
+            </div>
+          </div>
+
+          <button class="btn-submit" onclick="addTask()">✨ Thêm vào ngày đã chọn</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span><i data-lucide="list" style="color:var(--pink-main)"></i> Danh sách công việc</span>
+            <span style="font-size:12px; color:#a4717a;" id="displaySelectedDate"></span>
+          </div>
+          <div id="todayTaskList"></div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI -->
+      <div class="panel">
+        <div class="panel-title">
+          <span><i data-lucide="clock" style="color:var(--pink-main)"></i> Dòng thời gian trong ngày</span>
+          <span style="font-size:12px; color:#a4717a;" id="currentDateDisplay"></span>
+        </div>
+
+        <div class="timeline-container" id="timelineView"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: DASHBOARD THỐNG KÊ TỔNG KẾT TUẦN / THÁNG / NĂM -->
+  <div id="viewStats" class="view-section hidden">
+    <div class="analytics-filter">
+      <button class="filter-btn active" id="btnPeriodWeek" onclick="setStatsPeriod('week', this)">Tuần này</button>
+      <button class="filter-btn" onclick="setStatsPeriod('month', this)">Tháng này</button>
+      <button class="filter-btn" onclick="setStatsPeriod('year', this)">Cả Năm</button>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-card">
+        <div class="summary-lbl">Tổng giờ tập trung</div>
+        <div class="summary-val" id="statPeriodHours">0.0 giờ</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Tỷ lệ hoàn thành Task</div>
+        <div class="summary-val" id="statPeriodRate" style="color:#70e000;">0%</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Công việc đã hoàn tất</div>
+        <div class="summary-val" id="statPeriodDone">0 tasks</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-lbl">Lĩnh vực tập trung nhất</div>
+        <div class="summary-val" id="statPeriodTopTag" style="font-size:16px;">Chưa có</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="panel-title">📊 Xu hướng thời gian tập trung (Giờ)</div>
+        <canvas id="barChart" height="200"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="panel-title">🎨 Phân bổ theo loại công việc</div>
+        <canvas id="doughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let categories = [
+      { id: 'school', name: '🎓 Đi học', color: '#ff758f' },
+      { id: 'housework', name: '🏠 Việc nhà', color: '#ffb3c1' },
+      { id: 'self_study', name: '📖 Tự học', color: '#fbc4ab' },
+      { id: 'entertainment', name: '🎉 Đi chơi', color: '#b9fbc0' },
+      { id: 'work', name: '💼 Đi làm', color: '#8eecf5' }
+    ];
+    let selectedCategory = categories[0];
+    
+    let tasks = [];
+    let timelineBlocks = [];
+
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let activeTimer = null;
+    let currentPeriod = 'week';
+    let barChartInstance = null;
+    let doughnutChartInstance = null;
+
+    // --- CẤU HÌNH CLOUD SYNC GITHUB ---
+    function toggleTokenModal() {
+      const modal = document.getElementById('tokenModal');
+      modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+
+      if (modal.style.display === 'block') {
+        document.getElementById('ghUsernameInput').value = localStorage.getItem('gh_username') || '';
+        document.getElementById('ghRepoInput').value = localStorage.getItem('gh_repo') || '';
+        document.getElementById('ghTokenInput').value = localStorage.getItem('gh_pat_token') || '';
+      }
+    }
+
+    function saveSyncSettings() {
+      const u = document.getElementById('ghUsernameInput').value.trim();
+      const r = document.getElementById('ghRepoInput').value.trim();
+      const t = document.getElementById('ghTokenInput').value.trim();
+
+      if (!u || !r || !t) return alert("Vui lòng điền đủ thông tin!");
+
+      localStorage.setItem('gh_username', u);
+      localStorage.setItem('gh_repo', r);
+      localStorage.setItem('gh_pat_token', t);
+
+      toggleTokenModal();
+      loadDataFromPrivateRepo();
+    }
+
+    function updateSyncUI(isConnected, msg) {
+      const el = document.getElementById('syncStatusText');
+      if (isConnected) {
+        el.innerHTML = `🟢 <b>Cloud Sync:</b> ${msg}`;
+        el.style.color = "#2e7d32";
+      } else {
+        el.innerHTML = `🔴 <b>Cloud Sync:</b> ${msg}`;
+        el.style.color = "#c62828";
+      }
+    }
+
+    // TẢI DATA TỪ REPO PRIVATE KHI MỞ WEB
+    async function loadDataFromPrivateRepo() {
+      const u = localStorage.getItem('gh_username');
+      const r = localStorage.getItem('gh_repo');
+      const t = localStorage.getItem('gh_pat_token');
+
+      if (!u || !r || !t) {
+        updateSyncUI(false, "Chưa cấu hình Token (Dùng Local)");
+        return;
+      }
+
+      updateSyncUI(true, "Đang kết nối GitHub...");
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${u}/${r}/contents/database.json`, {
+          headers: { 'Authorization': `token ${t}` }
+        });
+
+        if (res.ok) {
+          const fileData = await res.json();
+          localStorage.setItem('gh_file_sha', fileData.sha);
+
+          const content = decodeURIComponent(escape(atob(fileData.content)));
+          const db = JSON.parse(content);
+
+          if (db.logs && Array.isArray(db.logs)) {
+            localStorage.setItem('full_history_db', JSON.stringify(db));
+            
+            tasks = [];
+            timelineBlocks = [];
+            db.logs.forEach(log => {
+              if (log.tasks) tasks.push(...log.tasks);
+              if (log.timelineBlocks) timelineBlocks.push(...log.timelineBlocks);
+            });
+
+            renderTaskList();
+            renderTimelineBase();
+            updateSyncUI(true, "Đồng bộ đám mây thành công!");
+          }
+        } else if (res.status === 404) {
+          updateSyncUI(true, "Đã kết nối Repo (Chưa có database.json)");
+        } else {
+          updateSyncUI(false, "Lỗi Token hoặc sai tên Repo!");
+        }
+      } catch (err) {
+        updateSyncUI(false, "Mất kết nối mạng!");
+      }
+    }
+
+    // LƯU DỮ LIỆU LÊN REPO PRIVATE (ADD LAST)
+    async function saveDataToPrivateRepo() {
+      const u = localStorage.getItem('gh_username');
+      const r = localStorage.getItem('gh_repo');
+      const t = localStorage.getItem('gh_pat_token');
+
+      if (!u || !r || !t) return;
+
+      const today = selectedDate;
+      let existingDb = JSON.parse(localStorage.getItem('full_history_db')) || { logs: [] };
+
+      const dayTasks = tasks.filter(item => item.date === today);
+      const dayTimeline = timelineBlocks.filter(item => item.date === today);
+
+      if (dayTasks.length > 0 || dayTimeline.length > 0) {
+        const totalSpentSec = dayTasks.reduce((acc, item) => acc + (item.spentSec || 0), 0);
+        const doneCount = dayTasks.filter(item => item.isDone).length;
+
+        const todayLog = {
+          date: today,
+          summary: {
+            totalHours: Number((totalSpentSec / 3600).toFixed(2)),
+            completedTasks: doneCount,
+            totalTasks: dayTasks.length
+          },
+          tasks: dayTasks,
+          timelineBlocks: dayTimeline
+        };
+
+        const idx = existingDb.logs.findIndex(l => l.date === today);
+        if (idx >= 0) existingDb.logs[idx] = todayLog;
+        else existingDb.logs.push(todayLog); // Add Last
+      }
+
+      localStorage.setItem('full_history_db', JSON.stringify(existingDb));
+
+      const contentString = JSON.stringify(existingDb, null, 2);
+      const encodedContent = btoa(unescape(encodeURIComponent(contentString)));
+      const sha = localStorage.getItem('gh_file_sha');
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${u}/${r}/contents/database.json`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `token ${t}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: `Auto Sync Planner: ${today}`,
+            content: encodedContent,
+            sha: sha || undefined
+          })
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          localStorage.setItem('gh_file_sha', resData.content.sha);
+          updateSyncUI(true, "Đã sao lưu lên GitHub!");
+        }
+      } catch (err) {
+        console.error("Lỗi Push Cloud:", err);
+      }
+    }
+
+    // IPHONE-FRIENDLY IMPORT (Tối ưu riêng cho Safari)
+    const fileInputHidden = document.createElement('input');
+    fileInputHidden.type = 'file';
+    fileInputHidden.accept = '.json';
+    fileInputHidden.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const importedDb = JSON.parse(evt.target.result);
+          if (importedDb.logs) {
+            localStorage.setItem('full_history_db', JSON.stringify(importedDb));
+            tasks = [];
+            timelineBlocks = [];
+            importedDb.logs.forEach(l => {
+              if (l.tasks) tasks.push(...l.tasks);
+              if (l.timelineBlocks) timelineBlocks.push(...l.timelineBlocks);
+            });
+          } else {
+            if (importedDb.tasks) tasks = importedDb.tasks;
+            if (importedDb.timelineBlocks) timelineBlocks = importedDb.timelineBlocks;
+          }
+          renderTaskList();
+          renderTimelineBase();
+          alert("✨ Đã khôi phục dữ liệu!");
+        } catch (err) {
+          alert("❌ File không hợp lệ!");
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    function importData() {
+      fileInputHidden.click();
+    }
+
+    function exportData() {
+      saveDataToPrivateRepo();
+      const localData = localStorage.getItem('full_history_db') || JSON.stringify({ tasks, categories, timelineBlocks });
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localData);
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `database.json`;
+      a.click();
+    }
+
+    // --- BASE LOGIC ---
+    window.onload = function() {
+      document.getElementById('selectedDateInput').value = selectedDate;
+      renderCategoryDots();
+      updateDateDisplay();
+      loadDateData();
+      loadDataFromPrivateRepo();
+      lucide.createIcons();
+    };
+
+    function goToToday() {
+      selectedDate = new Date().toISOString().split('T')[0];
+      document.getElementById('selectedDateInput').value = selectedDate;
+      onDateChange();
+    }
+
+    function onDateChange() {
+      selectedDate = document.getElementById('selectedDateInput').value;
+      if (!selectedDate) return;
+      updateDateDisplay();
+      loadDateData();
+    }
+
+    function updateDateDisplay() {
+      const parts = selectedDate.split('-');
+      const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      document.getElementById('displaySelectedDate').innerText = formatted;
+      document.getElementById('currentDateDisplay').innerText = formatted;
+    }
+
+    function loadDateData() {
+      renderTimelineBase();
+      renderTaskList();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('btnTabTask').classList.toggle('active', tab === 'tasks');
+      document.getElementById('btnTabStats').classList.toggle('active', tab === 'stats');
+      
+      document.getElementById('viewTasks').classList.toggle('hidden', tab !== 'tasks');
+      document.getElementById('viewStats').classList.toggle('hidden', tab !== 'stats');
+
+      if (tab === 'stats') {
+        renderAnalyticsCharts(currentPeriod);
+      }
+    }
+
+    function addNewCategory() {
+      const name = prompt("Nhập tên loại công việc mới:");
+      if (!name) return;
+      const color = prompt("Nhập mã màu HEX hoặc tên màu:", "#ffd166");
+      if (!color) return;
+
+      const newCat = { id: Date.now().toString(), name, color };
+      categories.push(newCat);
+      selectedCategory = newCat;
+      renderCategoryDots();
+    }
+
+    function renderCategoryDots() {
+      const list = document.getElementById('tagList');
+      list.innerHTML = '';
+      categories.forEach(cat => {
+        const isSelected = selectedCategory.id === cat.id ? 'selected' : '';
+        list.innerHTML += `
+          <button class="tag-btn ${isSelected}" style="background:${cat.color}22; color:#594146;" onclick="selectTag('${cat.id}')">
+            <span style="width:8px; height:8px; border-radius:50%; background:${cat.color}; display:inline-block;"></span>
+            ${cat.name}
+          </button>`;
+      });
+    }
+
+    function selectTag(catId) {
+      selectedCategory = categories.find(c => c.id === catId);
+      renderCategoryDots();
+    }
+
+    function toggleMode() {
+      const mode = document.getElementById('taskMode').value;
+      document.getElementById('flexibleArea').style.display = mode === 'flexible' ? 'block' : 'none';
+      document.getElementById('fixedArea').style.display = mode === 'fixed' ? 'grid' : 'none';
+    }
+
+    function renderTimelineBase() {
+      const container = document.getElementById('timelineView');
+      container.innerHTML = '';
+      for(let i=0; i<24; i++) {
+        const hour = i < 10 ? `0${i}:00` : `${i}:00`;
+        container.innerHTML += `<div class="time-slot" id="slot-${i}"><span>${hour}</span></div>`;
+      }
+
+      const dateBlocks = timelineBlocks.filter(b => b.date === selectedDate);
+      dateBlocks.forEach(b => drawBlockOnTimeline(b.title, b.start, b.end, b.color));
+    }
+
+    function addTask() {
+      const name = document.getElementById('taskName').value.trim();
+      const mode = document.getElementById('taskMode').value;
+      if (!name) return alert("Vui lòng nhập tên công việc!");
+
+      if (mode === 'flexible') {
+        const h = parseInt(document.getElementById('inputHours').value) || 0;
+        const m = parseInt(document.getElementById('inputMins').value) || 0;
+        const totalSec = (h * 3600) + (m * 60);
+        if (totalSec <= 0) return alert("Vui lòng nhập thời gian mục tiêu!");
+
+        tasks.push({
+          id: Date.now(), name, mode,
+          date: selectedDate,
+          category: selectedCategory,
+          targetSec: totalSec, spentSec: 0,
+          isDone: false
+        });
+      } else {
+        const start = document.getElementById('startTime').value;
+        const end = document.getElementById('endTime').value;
+        if (!start || !end) return alert("Vui lòng nhập đủ thời gian!");
+
+        tasks.push({
+          id: Date.now(), name, mode,
+          date: selectedDate,
+          category: selectedCategory,
+          start, end, isDone: false
+        });
+
+        timelineBlocks.push({
+          date: selectedDate,
+          title: name,
+          start, end,
+          color: selectedCategory.color
+        });
+
+        drawBlockOnTimeline(name, start, end, selectedCategory.color);
+      }
+
+      document.getElementById('taskName').value = '';
+      renderTaskList();
+      saveDataToPrivateRepo();
+    }
+
+    function drawBlockOnTimeline(title, startTime, endTime, color) {
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      
+      const topPx = (startH * 50) + (startM / 60 * 50);
+      const heightPx = ((endH * 60 + endM) - (startH * 60 + startM)) / 60 * 50;
+
+      const block = document.createElement('div');
+      block.className = 'task-block';
+      block.style.top = `${topPx}px`;
+      block.style.height = `${Math.max(heightPx, 25)}px`;
+      block.style.backgroundColor = color;
+      block.innerText = `${title} (${startTime} - ${endTime})`;
+
+      document.getElementById('timelineView').appendChild(block);
+    }
+
+    function toggleTaskDone(id) {
+      const t = tasks.find(item => item.id === id);
+      if (t) t.isDone = !t.isDone;
+      renderTaskList();
+      saveDataToPrivateRepo();
+    }
+
+    function renderTaskList() {
+      const container = document.getElementById('todayTaskList');
+      container.innerHTML = '';
+
+      const dayTasks = tasks.filter(t => t.date === selectedDate);
+
+      let totalTasks = dayTasks.length;
+      let fixedTasks = dayTasks.filter(t => t.mode === 'fixed').length;
+      let doneTasks = dayTasks.filter(t => t.isDone).length;
+      let remainSecTotal = 0;
+
+      dayTasks.forEach(t => {
+        if (t.mode === 'flexible' && !t.isDone) {
+          remainSecTotal += Math.max(0, t.targetSec - t.spentSec);
+        }
+      });
+
+      const remainH = Math.floor(remainSecTotal / 3600);
+      const remainM = Math.floor((remainSecTotal % 3600) / 60);
+
+      document.getElementById('statTotal').innerText = totalTasks;
+      document.getElementById('statFixedCount').innerText = fixedTasks;
+      document.getElementById('statDoneCount').innerText = doneTasks;
+      document.getElementById('statFlexRemain').innerText = `${remainH}h ${remainM}m`;
+
+      if (dayTasks.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#a4717a; padding:20px; font-size:13px;">Chưa có nhiệm vụ nào cho ngày này! ✨</div>`;
+        return;
+      }
+
+      dayTasks.forEach(t => {
+        const doneClass = t.isDone ? 'task-done' : '';
+        if (t.mode === 'fixed') {
+          container.innerHTML += `
+            <div class="task-card ${doneClass}">
+              <div class="task-card-header">
+                <span>${t.name}</span>
+                <span style="font-size:11px; background:${t.category.color}; color:#fff; padding:2px 8px; border-radius:10px;">${t.start} - ${t.end}</span>
+              </div>
+              <div class="task-card-actions">
+                <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+              </div>
+            </div>`;
+        } else {
+          const remainSec = Math.max(0, t.targetSec - t.spentSec);
+          const rH = Math.floor(remainSec / 3600);
+          const rM = Math.floor((remainSec % 3600) / 60);
+
+          container.innerHTML += `
+            <div class="task-card ${doneClass}">
+              <div class="task-card-header">
+                <span>${t.name}</span>
+                <span style="font-size:12px; color:var(--pink-main)">Còn lại: ${rH}h ${rM}m</span>
+              </div>
+              <div class="task-card-actions">
+                <button class="timer-btn" onclick="toggleTimer(${t.id})" ${t.isDone ? 'disabled' : ''}>
+                  ${activeTimer && activeTimer.id === t.id ? '⏹️ Tạm dừng' : '▶️ Bắt đầu'}
+                </button>
+                <button class="finish-btn" onclick="toggleTaskDone(${t.id})">${t.isDone ? '↩️ Mở lại' : '✓ Hoàn thành'}</button>
+              </div>
+            </div>`;
+        }
+      });
+    }
+
+    function toggleTimer(id) {
+      const task = tasks.find(t => t.id === id);
+      if (activeTimer && activeTimer.id === id) {
+        clearInterval(activeTimer.interval);
+        const now = new Date();
+        const endTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        timelineBlocks.push({
+          date: task.date,
+          title: task.name,
+          start: activeTimer.startStr,
+          end: endTimeStr,
+          color: task.category.color
+        });
+
+        if (task.date === selectedDate) {
+          drawBlockOnTimeline(task.name, activeTimer.startStr, endTimeStr, task.category.color);
+        }
+
+        activeTimer = null;
+        saveDataToPrivateRepo();
+      } else {
+        if(activeTimer) clearInterval(activeTimer.interval);
+        const now = new Date();
+        const startStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        activeTimer = {
+          id: id,
+          startStr: startStr,
+          interval: setInterval(() => {
+            task.spentSec++;
+            renderTaskList();
+          }, 1000)
+        };
+      }
+      renderTaskList();
+    }
+
+    function setStatsPeriod(period, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPeriod = period;
+      renderAnalyticsCharts(period);
+    }
+
+    function renderAnalyticsCharts(period) {
+      let totalSpentSec = 0;
+      let doneCount = 0;
+      let categoryMap = {};
+
+      categories.forEach(c => categoryMap[c.id] = 0);
+
+      tasks.forEach(t => {
+        let spent = t.spentSec || 0;
+        if (t.mode === 'fixed' && t.isDone) {
+          const [sh, sm] = t.start.split(':').map(Number);
+          const [eh, em] = t.end.split(':').map(Number);
+          spent = ((eh * 60 + em) - (sh * 60 + sm)) * 60;
+        }
+
+        totalSpentSec += spent;
+        if (t.isDone) doneCount++;
+
+        if (t.category && categoryMap[t.category.id] !== undefined) {
+          categoryMap[t.category.id] += spent;
+        }
+      });
+
+      const totalHours = (totalSpentSec / 3600).toFixed(1);
+      const completionRate = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
+
+      let topCatId = Object.keys(categoryMap).reduce((a, b) => categoryMap[a] > categoryMap[b] ? a : b, categories[0]?.id);
+      let topCatObj = categories.find(c => c.id === topCatId);
+      let topCatName = (totalSpentSec > 0 && topCatObj) ? topCatObj.name : 'Chưa có';
+
+      document.getElementById('statPeriodHours').innerText = `${totalHours} giờ`;
+      document.getElementById('statPeriodRate').innerText = `${completionRate}%`;
+      document.getElementById('statPeriodDone').innerText = `${doneCount} tasks`;
+      document.getElementById('statPeriodTopTag').innerText = topCatName;
+
+      let labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+      let dataHours = Array(7).fill(0);
+      dataHours[(new Date().getDay() + 6) % 7] = Number(totalHours);
+
+      const ctxBar = document.getElementById('barChart').getContext('2d');
+      if (barChartInstance) barChartInstance.destroy();
+      barChartInstance = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Số giờ', data: dataHours, backgroundColor: '#ff758f', borderRadius: 8 }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      const doughnutData = categories.map(c => (categoryMap[c.id] / 3600).toFixed(1));
+      const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+      if (doughnutChartInstance) doughnutChartInstance.destroy();
+      doughnutChartInstance = new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+          labels: categories.map(c => c.name),
+          datasets: [{ data: totalSpentSec > 0 ? doughnutData : categories.map(() => 0), backgroundColor: categories.map(c => c.color) }]
+        },
+        options: { responsive: true }
+      });
+    }
+  </script>
+</body>
+</html>
